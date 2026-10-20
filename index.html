@@ -1,0 +1,279 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Small browser tools for everyday coding: JSON, Base64, URL encoding and a text counter.">
+  <title>Dev Toolbox</title>
+  <style>
+:root {
+  --bg: #eef0f4;
+  --card: #ffffff;
+  --ink: #20242d;
+  --muted: #646b79;
+  --line: #d3d8e0;
+  --accent: #3f4fd1;
+  --accent-dark: #2f3cae;
+  --error: #b42318;
+  --ok: #176b3a;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.5;
+  padding: 0 1rem 2rem;
+}
+
+header, nav, main, footer { max-width: 44rem; margin-left: auto; margin-right: auto; }
+header { padding-top: 2rem; }
+h1 { margin: 0; font-size: 2rem; letter-spacing: -.02em; }
+h2 { margin: 0 0 .25rem; font-size: 1.15rem; }
+header p, .hint, footer { color: var(--muted); }
+header p { margin: .25rem 0 1.25rem; }
+.hint { margin: 0 0 .75rem; font-size: .95rem; }
+
+nav { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .75rem; }
+.tab {
+  font: inherit; cursor: pointer; padding: .45rem 1rem;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink);
+}
+.tab[aria-selected="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+.panel {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: 12px; padding: 1.25rem;
+}
+
+textarea {
+  width: 100%; font: .9rem/1.5 ui-monospace, "SF Mono", Consolas, monospace;
+  padding: .7rem; border: 1px solid var(--line); border-radius: 8px; resize: vertical;
+  color: var(--ink); background: #fbfbfd;
+}
+.row { display: flex; gap: .5rem; flex-wrap: wrap; margin: .7rem 0; }
+.row button {
+  font: inherit; cursor: pointer; padding: .5rem 1rem;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink);
+}
+.row button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.row button.primary:hover { background: var(--accent-dark); }
+.row button:hover { border-color: var(--ink); }
+button:focus-visible, textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.status { margin: .5rem 0 0; font-size: .9rem; min-height: 1.4em; }
+.status.error { color: var(--error); }
+.status.ok { color: var(--ok); }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; margin: 1rem 0 0; }
+.stats div { border: 1px solid var(--line); border-radius: 8px; padding: .6rem .8rem; }
+.stats dt { color: var(--muted); font-size: .85rem; }
+.stats dd { margin: 0; font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+
+footer { margin-top: 1.5rem; font-size: .85rem; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+[hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Dev Toolbox</h1>
+    <p>Four small tools for everyday coding. Everything runs in your browser, so nothing you paste is uploaded.</p>
+  </header>
+
+  <nav id="tabs" role="tablist" aria-label="Tools"></nav>
+
+  <main id="panels">
+    <section id="panel-count" class="panel" hidden>
+      <h2>Text counter</h2>
+      <p class="hint">Paste any text to see its size.</p>
+      <label for="count-input" class="sr">Text to count</label>
+      <textarea id="count-input" rows="8" placeholder="Paste text here"></textarea>
+      <dl class="stats">
+        <div><dt>Characters</dt><dd id="c-chars">0</dd></div>
+        <div><dt>Words</dt><dd id="c-words">0</dd></div>
+        <div><dt>Lines</dt><dd id="c-lines">0</dd></div>
+      </dl>
+    </section>
+  </main>
+
+  <footer>Made by Minahil Arshad Nadeem.</footer>
+  <script>
+// Dev Toolbox: JSON, Base64, URL encoding and a text counter.
+// Each converter is a small function. The panels are built from the `tools` list below.
+
+// Base64 needs a little care so that emoji and non-English text work.
+function toBase64(text) {
+  const bytes = new TextEncoder().encode(text);
+  let binary = "";
+  bytes.forEach((b) => (binary += String.fromCharCode(b)));
+  return btoa(binary);
+}
+
+function fromBase64(text) {
+  const binary = atob(text.trim());
+  const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
+const tools = {
+  json: {
+    title: "JSON",
+    hint: "Format, minify or check JSON.",
+    sample: '{"name":"Ayesha","skills":["html","css","js"],"active":true}',
+    actions: [
+      { label: "Format", primary: true, run: (t) => JSON.stringify(JSON.parse(t), null, 2) },
+      { label: "Minify", run: (t) => JSON.stringify(JSON.parse(t)) },
+      { label: "Validate", run: (t) => { JSON.parse(t); return "This is valid JSON."; } },
+    ],
+  },
+  base64: {
+    title: "Base64",
+    hint: "Turn text into Base64, or decode it back.",
+    sample: "Hello from Faisalabad",
+    actions: [
+      { label: "Encode", primary: true, run: toBase64 },
+      { label: "Decode", run: fromBase64 },
+    ],
+  },
+  url: {
+    title: "URL",
+    hint: "Encode text so it is safe inside a URL, or decode it.",
+    sample: "name=Ali Khan&city=Faisalabad",
+    actions: [
+      { label: "Encode", primary: true, run: encodeURIComponent },
+      { label: "Decode", run: decodeURIComponent },
+    ],
+  },
+};
+
+const tabs = document.getElementById("tabs");
+const panels = document.getElementById("panels");
+
+function makeButton(label, className) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.textContent = label;
+  if (className) b.className = className;
+  return b;
+}
+
+function buildPanel(id, tool) {
+  const panel = document.createElement("section");
+  panel.id = `panel-${id}`;
+  panel.className = "panel";
+  panel.hidden = true;
+
+  const title = document.createElement("h2");
+  title.textContent = tool.title;
+  const hint = document.createElement("p");
+  hint.className = "hint";
+  hint.textContent = tool.hint;
+
+  const input = document.createElement("textarea");
+  input.rows = 6;
+  input.placeholder = "Paste or type here";
+  input.setAttribute("aria-label", `${tool.title} input`);
+
+  const output = document.createElement("textarea");
+  output.rows = 6;
+  output.readOnly = true;
+  output.placeholder = "Result appears here";
+  output.setAttribute("aria-label", `${tool.title} result`);
+
+  const status = document.createElement("p");
+  status.className = "status";
+  status.setAttribute("role", "status");
+
+  const row = document.createElement("div");
+  row.className = "row";
+
+  function show(message, kind) {
+    status.textContent = message;
+    status.className = `status ${kind || ""}`;
+  }
+
+  tool.actions.forEach((action) => {
+    const btn = makeButton(action.label, action.primary ? "primary" : "");
+    btn.addEventListener("click", () => {
+      if (!input.value.trim()) {
+        show("Type or paste something first.", "error");
+        return;
+      }
+      try {
+        output.value = action.run(input.value);
+        show("Done.", "ok");
+      } catch (err) {
+        output.value = "";
+        show(`Could not ${action.label.toLowerCase()}: ${err.message}`, "error");
+      }
+    });
+    row.append(btn);
+  });
+
+  const sample = makeButton("Try an example");
+  sample.addEventListener("click", () => {
+    input.value = tool.sample;
+    output.value = "";
+    show("");
+  });
+
+  const copy = makeButton("Copy result");
+  copy.addEventListener("click", async () => {
+    if (!output.value) return show("There is no result to copy yet.", "error");
+    try {
+      await navigator.clipboard.writeText(output.value);
+      show("Copied.", "ok");
+    } catch (err) {
+      show("Copy is blocked here. Select the result and copy it by hand.", "error");
+    }
+  });
+  row.append(sample, copy);
+
+  panel.append(title, hint, input, row, output, status);
+  panels.prepend(panel);
+}
+
+function addTab(id, label) {
+  const tab = makeButton(label, "tab");
+  tab.id = `tab-${id}`;
+  tab.setAttribute("role", "tab");
+  tab.addEventListener("click", () => select(id));
+  tabs.append(tab);
+}
+
+function select(id) {
+  tabs.querySelectorAll(".tab").forEach((t) => {
+    t.setAttribute("aria-selected", String(t.id === `tab-${id}`));
+  });
+  panels.querySelectorAll(".panel").forEach((p) => {
+    p.hidden = p.id !== `panel-${id}`;
+  });
+}
+
+Object.entries(tools).forEach(([id, tool]) => {
+  buildPanel(id, tool);
+  addTab(id, tool.title);
+});
+addTab("count", "Counter");
+
+// Text counter: updates while you type.
+const countInput = document.getElementById("count-input");
+countInput.addEventListener("input", () => {
+  const text = countInput.value;
+  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+  const lines = text ? text.split("\n").length : 0;
+  document.getElementById("c-chars").textContent = text.length;
+  document.getElementById("c-words").textContent = words;
+  document.getElementById("c-lines").textContent = lines;
+});
+
+select("json");
+  </script>
+</body>
+  </html>
+  
